@@ -10,7 +10,6 @@
 pact/plugin
 pact/standalone
 pact/verifier
-pacts/
 logs/**
 getpact.docker-compose.yml
 *.so

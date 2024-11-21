@@ -7,8 +7,68 @@ require_relative '../area_calculator_consumer'
 include AreaCalculatorConsumer
 require 'grpc'
 
-RSpec.describe 'pactffi_new_plugin spec' do
+RSpec.describe 'pactffi_new_plugin spec', order: :defined do
   # unskip so this test runs, it will fail verification correctly on the provider side (method not implemented)
+  describe 'with grpcInteraction - error 1' do
+    let(:contents) do
+      {
+        "pact:proto": File.expand_path('./proto/area_calculator.proto'),
+        "pact:proto-service": 'Calculator/calculateOne',
+        "pact:content-type": 'application/protobuf',
+        "request": {
+          "rectangle": {
+            "length": 'matching(number, 3)',
+            "width": 'matching(number, 4)'
+          }
+        },
+        "responseMetadata": {
+          "grpc-status": "UNIMPLEMENTED",
+          "grpc-message": "Not implemented"
+        }
+      }
+    end
+
+    let(:pact) {PactFfi.new_pact("grpc-consumer-ruby", 'area-calculator-provider') }
+    let(:message_pact) do
+      PactFfi::SyncMessageConsumer.new_interaction(pact, 'pact calc error 1')
+    end
+    let(:spec_version) do
+      PactFfi::MockServer.with_specification(pact, PactFfi::FfiSpecificationVersion['SPECIFICATION_VERSION_V4'])
+    end
+    let(:mock_server_port) { PactFfi::MockServer.create_for_transport(pact, '127.0.0.1', 0, 'grpc', nil) }
+
+    before do
+      PactFfi.with_pact_metadata(pact, 'pact-ruby', 'ffi', PactFfi.version)
+      PactFfi::Logger.log_to_stdout(PactFfi::FfiLogLevelFilter['LOG_LEVEL_INFO'])
+      PactFfi::Logger.message('pact_ruby', 'INFO', 'pact ruby grpc is alive')
+      PactFfi::PluginConsumer.using_plugin(pact, 'protobuf', '0.4.0')
+    end
+    after do
+      matched = PactFfi::MockServer.matched(mock_server_port)
+      if matched == true
+        res_write_pact = PactFfi::MockServer.write_pact_file(mock_server_port, './pacts', false)
+        if res_write_pact.zero?
+          puts 'pact file generated'
+        else
+          puts "Failed to write pact file: #{res_write_pact}"
+        end
+      else
+        mismatches = PactFfi::MockServer.mismatches(mock_server_port)
+        if JSON.parse(mismatches).length.zero?
+          raise 'the mock server returned matched false, but there are no mismatches to report, this shouldn\t be the case'
+        end
+        puts JSON.parse(mismatches)
+      end
+      PactFfi::MockServer.cleanup(mock_server_port)
+      expect(matched).to be(true)
+    end
+    it 'executes the pact test without errors' do
+      PactFfi::PluginConsumer.interaction_contents(message_pact, 0, 'application/grpc', JSON.dump(contents))
+      expect do
+        AreaCalculatorConsumer.get_rectangle_area("localhost:#{mock_server_port}")
+      end.to raise_error(/Not implemented/)
+    end
+  end
   describe 'with grpcInteraction - calculateMulti' do
     let(:contents) do
       {
@@ -97,10 +157,10 @@ RSpec.describe 'pactffi_new_plugin spec' do
 
     let(:pact) {PactFfi.new_pact("grpc-consumer-ruby", 'area-calculator-provider') }
     let(:message_pact) do
-     PactFfi::SyncMessageConsumer.new_interaction(pact, 'pact calc 2')
+      PactFfi::SyncMessageConsumer.new_interaction(pact, 'pact calc 2')
     end
     let(:spec_version) do
-     PactFfi::MockServer.with_specification(pact, PactFfi::FfiSpecificationVersion['SPECIFICATION_VERSION_V4'])
+      PactFfi::MockServer.with_specification(pact, PactFfi::FfiSpecificationVersion['SPECIFICATION_VERSION_V4'])
     end
     let(:mock_server_port) { PactFfi::MockServer.create_for_transport(pact, '127.0.0.1', 0, 'grpc', nil) }
 
@@ -130,9 +190,69 @@ RSpec.describe 'pactffi_new_plugin spec' do
       expect(matched).to be(true)
     end
     it 'executes the pact test without errors' do
-     PactFfi::PluginConsumer.interaction_contents(message_pact, 0, 'application/grpc', JSON.dump(contents))
+      PactFfi::PluginConsumer.interaction_contents(message_pact, 0, 'application/grpc', JSON.dump(contents))
       res = AreaCalculatorConsumer.get_rectangle_area("localhost:#{mock_server_port}")
       expect(res).to eq([12.0])
+    end
+  end
+  describe 'with grpcInteraction - error 2' do
+    let(:contents) do
+      {
+        "pact:proto": File.expand_path('./proto/area_calculator.proto'),
+        "pact:proto-service": 'Calculator/calculateOne',
+        "pact:content-type": 'application/protobuf',
+        "request": {
+          "rectangle": {
+            "length": 'matching(number, 3)',
+            "width": 'matching(number, 4)'
+          }
+        },
+        "responseMetadata": {
+          "grpc-status": "UNIMPLEMENTED",
+          "grpc-message": "Not implemented"
+        }
+      }
+    end
+
+    let(:pact) {PactFfi.new_pact("grpc-consumer-ruby", 'area-calculator-provider') }
+    let(:message_pact) do
+      PactFfi::SyncMessageConsumer.new_interaction(pact, 'pact calc error 2')
+    end
+    let(:spec_version) do
+      PactFfi::MockServer.with_specification(pact, PactFfi::FfiSpecificationVersion['SPECIFICATION_VERSION_V4'])
+    end
+    let(:mock_server_port) { PactFfi::MockServer.create_for_transport(pact, '127.0.0.1', 0, 'grpc', nil) }
+
+    before do
+      PactFfi.with_pact_metadata(pact, 'pact-ruby', 'ffi', PactFfi.version)
+      PactFfi::Logger.log_to_stdout(PactFfi::FfiLogLevelFilter['LOG_LEVEL_INFO'])
+      PactFfi::Logger.message('pact_ruby', 'INFO', 'pact ruby grpc is alive')
+      PactFfi::PluginConsumer.using_plugin(pact, 'protobuf', '0.4.0')
+    end
+    after do
+      matched = PactFfi::MockServer.matched(mock_server_port)
+      if matched == true
+        res_write_pact = PactFfi::MockServer.write_pact_file(mock_server_port, './pacts', false)
+        if res_write_pact.zero?
+          puts 'pact file generated'
+        else
+          puts "Failed to write pact file: #{res_write_pact}"
+        end
+      else
+        mismatches = PactFfi::MockServer.mismatches(mock_server_port)
+        if JSON.parse(mismatches).length.zero?
+          raise 'the mock server returned matched false, but there are no mismatches to report, this shouldn\t be the case'
+        end
+        puts JSON.parse(mismatches)
+      end
+      PactFfi::MockServer.cleanup(mock_server_port)
+      expect(matched).to be(true)
+    end
+    it 'executes the pact test without errors' do
+      PactFfi::PluginConsumer.interaction_contents(message_pact, 0, 'application/grpc', JSON.dump(contents))
+      expect do
+        AreaCalculatorConsumer.get_rectangle_area("localhost:#{mock_server_port}")
+      end.to raise_error(/Not implemented/)
     end
   end
 end
